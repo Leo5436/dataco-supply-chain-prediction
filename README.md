@@ -1,5 +1,4 @@
-# dataco-supply-chain-prediction
-# Late Delivery & Shipping Time Prediction
+# dataco-supply-chain-prediction:Late Delivery & Shipping Time Prediction
 
 Predicting late-delivery risk and actual shipping duration using machine learning on DataCo Global's real-world supply chain dataset (180K+ orders).
 
