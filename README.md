@@ -26,7 +26,7 @@ provisioning, production, sales, and distribution.
 | Random Forest | 0.701 | 75.2% |
 | **XGBoost (best)** | **0.700** | **77.8%** |
 
-Shipping-time regression: RMSE = 1.25 days (XGBoost)
+Shipping-time regression: RMSE = 1.21 days (Random Forest)
 
 ## Tech Stack
 Python · Pandas · scikit-learn · XGBoost · Matplotlib · Seaborn
