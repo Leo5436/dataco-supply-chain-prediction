@@ -1,5 +1,4 @@
-# dataco-supply-chain-prediction:Late Delivery & Shipping Time Prediction
-
+# DataCo Supply Chain: Late Delivery & Shipping Time Prediction
 Predicting late-delivery risk and actual shipping duration using machine learning on DataCo Global's real-world supply chain dataset (180K+ orders).
 
 ## Overview
@@ -39,4 +38,4 @@ best ROC-AUC and overall discrimination.
 Best model predicts actual shipping duration within ~0.94 days on average (MAE).
 
 ## Tech Stack
-Python · Pandas · scikit-learn · XGBoost · Matplotlib · Seaborn
+Python · Pandas · Numpy · scikit-learn · XGBoost · Matplotlib · Seaborn
