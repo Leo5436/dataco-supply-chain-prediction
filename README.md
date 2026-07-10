@@ -22,11 +22,21 @@ provisioning, production, sales, and distribution.
 ## Results
 | Model | ROC-AUC | Recall |
 |-------|---------|--------|
-| Logistic Regression | 0.692 | 70% |
-| Random Forest | 0.701 | 75.2% |
-| **XGBoost (best)** | **0.700** | **77.8%** |
+| Logistic Regression | 0.70 | 59% |
+| Random Forest | 0.752 | 56% |
+| **XGBoost (best)** | **0.778** | **59%** |
 
-Shipping-time regression: RMSE = 1.21 days (Random Forest)
+Recall reported for the positive class (late delivery). XGBoost achieved the
+best ROC-AUC and overall discrimination.
+
+### Regression — Shipping Days
+| Model | RMSE | MAE | R² |
+|-------|------|-----|-----|
+| Linear Regression | 1.39 | 1.13 | 0.270 |
+| **Random Forest (best)** | **1.21** | **0.94** | **0.445** |
+| XGBoost | 1.25 | 1.00 | 0.405 |
+
+Best model predicts actual shipping duration within ~0.94 days on average (MAE).
 
 ## Tech Stack
 Python · Pandas · scikit-learn · XGBoost · Matplotlib · Seaborn
