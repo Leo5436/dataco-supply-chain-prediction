@@ -14,7 +14,7 @@ provisioning, production, sales, and distribution.
 - **Data leakage prevention**: removed `Delivery Status` and post-hoc fields
   that would not be available at prediction time
 - **Feature engineering**: created discount-quantity interaction, unit price,
-  and time-based features (order month, quarter, day-of-week)
+  and time-based features (order month, quarter, day-of-week) for the classification task
 - **Handled real-world data issues**: latin-1 encoding, missing values,
   high-cardinality categorical fields, PII removal
 
