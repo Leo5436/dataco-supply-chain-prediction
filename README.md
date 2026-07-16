@@ -141,7 +141,3 @@ SHAP waterfall plots explain **individual order predictions**, showing exactly w
 ## Tech Stack
 
 Python · Pandas · NumPy · scikit-learn · XGBoost · SHAP · SciPy · Matplotlib · Seaborn · joblib
-
-## Next Steps
-
-- **Streamlit app** (in progress): interactive risk scoring for new orders using the persisted model, feature schema, and business threshold.
