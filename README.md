@@ -1,56 +1,147 @@
-# DataCo Supply Chain: Late Delivery & Shipping Time Prediction
+# DataCo Supply Chain: Late Delivery Risk & Shipping Time Prediction
 
-Predicting late-delivery risk and actual shipping duration using machine learning on DataCo Global's real-world supply chain dataset (180K+ orders).
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Leo5436/dataco-supply-chain-prediction/blob/main/Supply_Chain.ipynb)
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![scikit--learn](https://img.shields.io/badge/scikit--learn-ML-orange)
+![XGBoost](https://img.shields.io/badge/XGBoost-0.814_ROC--AUC-green)
+![SHAP](https://img.shields.io/badge/SHAP-Explainability-red)
 
-## Overview
-- **Classification**: predict whether an order will be delivered late
-- **Regression**: forecast actual shipping days
+An end-to-end machine learning project on **180K+ real-world supply chain orders**: from exploratory analysis and leakage-aware preprocessing to business-driven threshold selection, hyperparameter optimization, cross-validated evaluation, and SHAP explainability — finishing with persisted, ready-to-serve model artifacts.
+
+---
+
+## Business Problem
+
+Late deliveries erode customer trust and trigger costly downstream disruptions across the supply chain. In this dataset, **~55% of orders arrive late**, making proactive risk detection a high-impact use case.
+
+Two complementary models are built from order-time information only:
+
+1. **Classification** — flag orders at risk of late delivery *at order placement*, so operations teams can intervene early (expedite, re-route, or reset customer expectations).
+2. **Regression** — forecast the actual number of shipping days to support more reliable delivery promises.
+
+## Highlights
+
+- **ROC-AUC 0.778 → 0.814** on the classification task after hyperparameter tuning, with **5-fold cross-validation confirming stability (0.813 ± 0.002)**.
+- **Decision threshold aligned to a business requirement** — catch at least 80% of late orders — rather than defaulting to 0.5.
+- **Shipping duration predicted within ~0.94 days (MAE)** by the best regressor.
+- **Leakage-aware pipeline**: post-hoc fields removed, PII stripped, and every design choice documented in the notebook.
+- **SHAP explainability** translates model behavior into insights that non-technical stakeholders can act on.
 
 ## Dataset
-[DataCo Smart Supply Chain](https://www.kaggle.com/datasets/shashwatwork/dataco-smart-supply-chain-for-big-data-analysis)
-— real transactional data from DataCo Global: 180K+ orders, 50+ features across
-provisioning, production, sales, and distribution.
 
-## Key Engineering Decisions
-- **Data leakage prevention**: removed `Delivery Status` and post-hoc fields
-  that would not be available at prediction time
-- **Feature engineering**: created discount-quantity interaction, unit price,
-  and time-based features (order month, quarter, day-of-week) for the classification task
-- **Handled real-world data issues**: latin-1 encoding, missing values,
-  high-cardinality categorical fields （>50 unique values), PII removal
-- **Scaling**: standardized features for Logistic Regression only (tree-based
-  models are scale-invariant)
-  
+[DataCo Smart Supply Chain](https://www.kaggle.com/datasets/shashwatwork/dataco-smart-supply-chain-for-big-data-analysis) — real transactional data from DataCo Global: **180,519 orders × 53 columns** spanning provisioning, production, sales, and distribution.
+
+## Exploratory Analysis
+
+Late-delivery rates vary sharply by shipping mode and region, and actual shipping times regularly overshoot the scheduled window — the gap the models are built to predict.
+
+<p align="center">
+  <img src="images/late_rate_by_shipping_mode.png" width="48%" alt="Late delivery rate by shipping mode"/>
+  <img src="images/actual_vs_scheduled_days.png" width="48%" alt="Actual vs scheduled shipping days"/>
+</p>
+
+## Approach
+
+The notebook walks through the full pipeline:
+
+1. **Data audit & EDA** — distributions, class balance (54.8% late), late-rate breakdowns by shipping mode and region.
+2. **Data cleaning** — handled latin-1 encoding, imputed missing values (median / mode), and dropped columns with >30% missingness.
+3. **Leakage prevention** — removed `Delivery Status` and actual shipping days from the classification features: these are outcomes, not order-time information.
+4. **PII removal** — customer emails, passwords, names, and street addresses dropped before modeling.
+5. **Feature engineering** — discount × quantity interaction, unit price, and time-based features (order month, quarter, day-of-week); high-cardinality categoricals (>50 unique values) removed before one-hot encoding (final matrix: 175 features).
+6. **Model benchmarking** — Logistic Regression (with standardization), Random Forest, and XGBoost compared on a stratified 80/20 split.
+7. **Business-driven threshold tuning** — precision–recall trade-off analyzed to meet an operational recall target.
+8. **Hyperparameter tuning** — `RandomizedSearchCV` (25 candidates × 3-fold CV) over depth, learning rate, estimators, and subsampling.
+9. **Cross-validation** — 5-fold CV to verify the results are not an artifact of a single split.
+10. **SHAP explainability** — global (beeswarm, bar) and local (waterfall) explanations.
+11. **Model persistence** — best models, feature column order, and the chosen decision threshold saved with `joblib` for downstream serving.
+
 ## Results
-| Model | ROC-AUC | Recall |
-|-------|---------|--------|
-| Logistic Regression | 0.70 | 59% |
-| Random Forest | 0.752 | 56% |
-| **XGBoost (best)** | **0.778** | **59%** |
 
-Recall reported for the positive class (late delivery). XGBoost achieved the
-best ROC-AUC and overall discrimination.
+### Classification — Late Delivery Risk
+
+| Model | ROC-AUC |
+|-------|---------|
+| Logistic Regression | 0.700 |
+| Random Forest | 0.751 |
+| XGBoost (baseline) | 0.778 |
+| **XGBoost (tuned)** | **0.814** |
+
+5-fold cross-validation of the tuned model: **ROC-AUC 0.813 ± 0.002** — consistent performance across all folds.
+
+<p align="center">
+  <img src="images/roc_curve.png" width="70%" alt="ROC curve comparison"/>
+</p>
+
+### From Metric to Decision: Threshold Tuning
+
+A missed late delivery is costlier than a false alarm, so the default 0.5 threshold is the wrong operating point. Given a business requirement of **catching at least 80% of late orders**, the precision–recall curve identifies a threshold of **0.387**:
+
+| Decision Threshold | Precision (late) | Recall (late) | F1 (late) |
+|--------------------|------------------|---------------|-----------|
+| 0.50 (default) | 0.83 | 0.59 | 0.69 |
+| **0.387 (business target)** | 0.67 | **0.80** | **0.73** |
+
+The chosen threshold trades precision for recall by design — and F1 for the late class actually *improves*. The threshold itself is saved alongside the model as a deployable artifact.
+
+<p align="center">
+  <img src="images/threshold_tradeoff.png" width="70%" alt="Precision vs recall across thresholds"/>
+</p>
 
 ### Regression — Shipping Days
+
 | Model | RMSE | MAE | R² |
 |-------|------|-----|-----|
 | Linear Regression | 1.39 | 1.13 | 0.270 |
 | **Random Forest (best)** | **1.21** | **0.94** | **0.445** |
-| XGBoost | 1.25 | 1.00 | 0.405 |
+| XGBoost (baseline) | 1.25 | 1.00 | 0.405 |
+| XGBoost (tuned) | 1.25 | 0.99 | 0.409 |
 
-Best model predicts actual shipping duration within ~0.94 days on average (MAE).
+5-fold cross-validation of the Random Forest: **R² 0.441 ± 0.005**. Tuning barely moved XGBoost on this task, so Random Forest was kept as the final regressor — evidence that **no single model wins across tasks**, and that tuning effort should follow the data rather than habit.
 
+## Model Explainability (SHAP)
+
+<p align="center">
+  <img src="images/shap_summary.png" width="70%" alt="SHAP beeswarm summary"/>
+</p>
+
+**What drives late-delivery risk:**
+
+- **The scheduled shipping window (`scheduled_days`) dominates every other feature.** Orders with short promised windows (low values, blue) receive strongly positive SHAP values — **tight delivery promises are the ones that slip**. Because the scheduled window is set by the shipping mode, this single feature effectively absorbs the shipping-mode signal.
+- **Geography matters**: latitude and longitude rank next, indicating regional differences in logistics performance — consistent with the regional late-rate patterns seen in EDA.
+- **Temporal features contribute**: order month and day-of-week carry signal, suggesting seasonal and weekly load effects.
+- **A candid observation**: `Customer Id` also ranks high, meaning the model partially keys on customer-level patterns through an ID column — a known limitation worth controlling for in production settings.
+
+SHAP waterfall plots explain **individual order predictions**, showing exactly which factors pushed a specific order toward "late" — the kind of per-case reasoning operations teams need in order to trust and act on a model's output:
+
+<p align="center">
+  <img src="images/shap_waterfall.png" width="70%" alt="SHAP waterfall for a single order"/>
+</p>
 
 ## Key Takeaways
-- **No single model wins across tasks**: XGBoost led on classification
-  (ROC-AUC 0.778) while Random Forest led on regression (R² 0.445), showing
-  model choice should follow the task and features.
-- **The classifiers lean toward predicting on-time** (recall ~0.59 on the late
-  class). Since a missed late delivery is costlier than a false alarm, lowering
-  the decision threshold below 0.5 would trade precision for higher recall — a
-  deliberate business tradeoff.
-- **XGBoost regression used default hyperparameters**; tuning (max_depth,
-  learning_rate, n_estimators) would likely close the gap with Random Forest.
-  
+
+- **Start from the business question, not the metric.** The threshold analysis converts an abstract ROC-AUC into an operating point that meets a concrete operational target (80% recall on late orders).
+- **Guard against leakage before optimizing anything.** Removing post-hoc fields keeps the reported performance honest and achievable at prediction time.
+- **Validate that gains are real.** Hyperparameter tuning added +0.036 ROC-AUC, and 5-fold CV (±0.002) confirms the improvement is stable rather than split luck.
+- **Explainability is a deliverable, not an afterthought.** SHAP turns the model into a communicable story: tight schedules, geography, and timing drive risk.
+
+## Repository & Reproducibility
+
+```
+├── Supply_Chain.ipynb   # Full pipeline: EDA → cleaning → features → models
+│                        # → threshold → tuning → CV → SHAP → persistence
+├── images/              # Exported figures used in this README
+└── README.md
+```
+
+1. Click the **Open in Colab** badge above.
+2. Download the dataset from [Kaggle](https://www.kaggle.com/datasets/shashwatwork/dataco-smart-supply-chain-for-big-data-analysis) and update `file_path` in the first cell.
+3. Run all cells — trained models (`.pkl`), the feature column order, and the decision threshold are exported at the end.
+
 ## Tech Stack
-Python · Pandas · NumPy · scikit-learn · XGBoost · Matplotlib · Seaborn
+
+Python · Pandas · NumPy · scikit-learn · XGBoost · SHAP · SciPy · Matplotlib · Seaborn · joblib
+
+## Next Steps
+
+- **Streamlit app** (in progress): interactive risk scoring for new orders using the persisted model, feature schema, and business threshold.
