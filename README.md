@@ -1,6 +1,7 @@
 # DataCo Supply Chain: Late Delivery Risk & Shipping Time Prediction
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Leo5436/dataco-supply-chain-prediction/blob/main/Supply_Chain.ipynb)
+[![CI](https://github.com/Leo5436/dataco-supply-chain-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/Leo5436/dataco-supply-chain-prediction/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.x-blue)
 ![scikit--learn](https://img.shields.io/badge/scikit--learn-ML-orange)
 ![XGBoost](https://img.shields.io/badge/XGBoost-0.814_ROC--AUC-green)
@@ -137,6 +138,27 @@ SHAP waterfall plots explain **individual order predictions**, showing exactly w
 1. Click the **Open in Colab** badge above.
 2. Download the dataset from [Kaggle](https://www.kaggle.com/datasets/shashwatwork/dataco-smart-supply-chain-for-big-data-analysis) and update `file_path` in the first cell.
 3. Run all cells — trained models (`.pkl`), the feature column order, and the decision threshold are exported at the end.
+
+## Reproducibility & CI/CD
+
+Every push to `main` and every pull request triggers a GitHub Actions
+workflow with three checks:
+
+1. **Lint** — Ruff enforces code quality across both `.py` files and the
+   training notebook.
+2. **Artifact contract tests** — pytest verifies that the persisted model,
+   feature-column list, and decision threshold stay mutually consistent and
+   remain compatible with `app.py`. This includes an automated guard asserting
+   that leakage columns never appear in the feature set.
+3. **End-to-end notebook execution** — the full pipeline is re-run from a clean
+   runner on a 3,000-row stratified sample, confirming the notebook is
+   reproducible top-to-bottom and does not depend on leftover kernel state.
+
+The notebook is parameterized via environment variables (`DATA_PATH`,
+`SEARCH_N_ITER`, `CV_FOLDS`), so the same code runs unmodified on Colab with the
+full 180K-row dataset and on CI with the lightweight sample.
+
+Merges to `main` are automatically redeployed to Streamlit Community Cloud.
 
 ## Tech Stack
 
