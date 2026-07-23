@@ -1,1 +1,79 @@
+name: CI
 
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:          # 允許手動觸發，方便測試
+
+jobs:
+  # ---------- 第一關：程式碼風格檢查 ----------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 安裝 ruff
+        run: pip install ruff
+
+      - name: 檢查程式碼與 notebook
+        run: ruff check .
+
+  # ---------- 第二關：產出物測試 ----------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 安裝套件
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: 執行 pytest
+        run: pytest -v
+
+  # ---------- 第三關：notebook 端到端執行 ----------
+  notebook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 安裝套件
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: 用小樣本從頭執行整本 notebook
+        env:
+          DATA_PATH: data/sample_orders.csv
+          SEARCH_N_ITER: "2"
+          CV_FOLDS: "2"
+        run: |
+          jupyter nbconvert --to notebook --execute \
+            --ExecutePreprocessor.timeout=900 \
+            --output /tmp/executed.ipynb \
+            notebooks/supply_chain.ipynb
+
+      - name: 保留執行結果供除錯
+        if: always()          # 就算上一步失敗也要保留
+        uses: actions/upload-artifact@v4
+        with:
+          name: executed-notebook
+          path: /tmp/executed.ipynb
