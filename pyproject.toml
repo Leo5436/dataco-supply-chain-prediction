@@ -1,2 +1,10 @@
+[tool.ruff]
+line-length = 100
+extend-include = ["*.ipynb"]        # 讓 ruff 也檢查 notebook
 
-# 稍後
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]       # 語法錯誤、未使用變數、排版、import 排序
+ignore = [
+    "E402",   # notebook 常在中間 import，屬正常
+    "E501",   # 行太長，中文註解容易超標
+]
