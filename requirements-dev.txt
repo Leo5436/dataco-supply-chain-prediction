@@ -3,4 +3,3 @@ pytest
 jupyter
 nbconvert
 ipykernel
-joblib
