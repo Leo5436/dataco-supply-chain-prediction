@@ -69,7 +69,7 @@ jobs:
           jupyter nbconvert --to notebook --execute \
             --ExecutePreprocessor.timeout=900 \
             --output /tmp/executed.ipynb \
-            notebooks/supply_chain.ipynb
+            Supply_Chain.ipynb
 
       - name: 保留執行結果供除錯
         if: always()          # 就算上一步失敗也要保留
