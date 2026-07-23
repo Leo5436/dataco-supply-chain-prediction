@@ -4,3 +4,5 @@ pytest
 jupyter
 nbconvert
 ipykernel
+matplotlib
+seaborn
