@@ -1,1 +1,5 @@
-
+ruff
+pytest
+jupyter
+nbconvert
+ipykernel
