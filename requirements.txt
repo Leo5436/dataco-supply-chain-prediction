@@ -1,6 +1,1 @@
-ruff
-pytest
-jupyter
-nbconvert
-ipykernel
-joblib
+
