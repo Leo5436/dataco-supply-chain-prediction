@@ -27,6 +27,7 @@ Two complementary models are built from order-time information only:
 - **Shipping duration predicted within ~0.94 days (MAE)** by the best regressor.
 - **Leakage-aware pipeline**: post-hoc fields removed, PII stripped, and every design choice documented in the notebook.
 - **SHAP explainability** translates model behavior into insights that non-technical stakeholders can act on.
+- **Automated CI pipeline** (GitHub Actions) lints the code, runs contract tests on the persisted artifacts, and re-executes the entire notebook end-to-end on every push.
 
 ## Dataset
 
@@ -126,30 +127,51 @@ SHAP waterfall plots explain **individual order predictions**, showing exactly w
 - **Validate that gains are real.** Hyperparameter tuning added +0.036 ROC-AUC, and 5-fold CV (±0.002) confirms the improvement is stable rather than split luck.
 - **Explainability is a deliverable, not an afterthought.** SHAP turns the model into a communicable story: tight schedules, geography, and timing drive risk.
 
-## Repository & Reproducibility
+## Repository Structure
 
 ```
-├── Supply_Chain.ipynb   # Full pipeline: EDA → cleaning → features → models
-│                        # → threshold → tuning → CV → SHAP → persistence
-├── images/              # Exported figures used in this README
-└── README.md
+├── .github/workflows/ci.yml   # Lint · artifact tests · end-to-end notebook run
+├── Supply_Chain.ipynb         # Full pipeline: EDA → cleaning → features → models
+│                              # → threshold → tuning → CV → SHAP → persistence
+├── tests/test_artifacts.py    # Contract tests for the persisted model artifacts
+├── data/sample_orders.csv     # 3,000-row sample so CI can run without Kaggle
+├── images/                    # Exported figures used in this README
+├── xgb_late_delivery.pkl      # Tuned classifier
+├── xgb_shipping_days.pkl      # Tuned regressor
+├── feature_columns.pkl        # Training-time column order (schema contract)
+├── threshold.pkl              # Business-selected decision threshold (0.387)
+├── requirements.txt           # Runtime dependencies
+├── requirements-dev.txt       # Lint / test / notebook execution dependencies
+└── pyproject.toml             # Ruff configuration
 ```
 
-1. Click the **Open in Colab** badge above.
-2. Download the dataset from [Kaggle](https://www.kaggle.com/datasets/shashwatwork/dataco-smart-supply-chain-for-big-data-analysis) and update `file_path` in the first cell.
-3. Run all cells — trained models (`.pkl`), the feature column order, and the decision threshold are exported at the end.
+### Running it yourself
 
-## Reproducibility & CI/CD
+**On Colab (full dataset):** click the **Open in Colab** badge above, download the dataset from [Kaggle](https://www.kaggle.com/datasets/shashwatwork/dataco-smart-supply-chain-for-big-data-analysis) into your Drive, and run all cells. The notebook auto-detects Colab and mounts Drive; override the location with the `DATA_PATH` environment variable if your path differs.
+
+**Locally (bundled sample):**
+
+```bash
+pip install -r requirements-dev.txt
+pytest -v                       # artifact contract tests
+jupyter nbconvert --to notebook --execute Supply_Chain.ipynb
+```
+
+With no environment variables set, the notebook falls back to `data/sample_orders.csv`, so it runs out of the box without a Kaggle account.
+
+## Continuous Integration
 
 Every push to `main` and every pull request triggers a GitHub Actions
 workflow with three checks:
 
 1. **Lint** — Ruff enforces code quality across both `.py` files and the
    training notebook.
-2. **Artifact contract tests** — pytest verifies that the persisted model,
-   feature-column list, and decision threshold stay mutually consistent and
-   remain compatible with `app.py`. This includes an automated guard asserting
-   that leakage columns never appear in the feature set.
+2. **Artifact contract tests** — pytest verifies that the persisted model, the
+   saved feature-column order, and the decision threshold stay mutually
+   consistent, and that the model still returns a valid probability when fed a
+   request shaped the way a serving layer would send it. This includes an
+   automated guard asserting that leakage columns never reappear in the feature
+   set — so the honesty of the pipeline is enforced by tests, not by memory.
 3. **End-to-end notebook execution** — the full pipeline is re-run from a clean
    runner on a 3,000-row stratified sample, confirming the notebook is
    reproducible top-to-bottom and does not depend on leftover kernel state.
@@ -158,8 +180,10 @@ The notebook is parameterized via environment variables (`DATA_PATH`,
 `SEARCH_N_ITER`, `CV_FOLDS`), so the same code runs unmodified on Colab with the
 full 180K-row dataset and on CI with the lightweight sample.
 
-Merges to `main` are automatically redeployed to Streamlit Community Cloud.
-
 ## Tech Stack
 
-Python · Pandas · NumPy · scikit-learn · XGBoost · SHAP · SciPy · Matplotlib · Seaborn · joblib
+Python · Pandas · NumPy · scikit-learn · XGBoost · SHAP · SciPy · Matplotlib · Seaborn · joblib · pytest · Ruff · GitHub Actions
+
+## Next Steps
+
+- **Streamlit app** (in progress): interactive risk scoring for new orders, served from the persisted model, feature schema, and business threshold — the artifact contract tests above already cover the interface it will consume.
